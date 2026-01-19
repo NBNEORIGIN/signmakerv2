@@ -2348,11 +2348,15 @@ if __name__ == '__main__':
     # Register job API routes
     register_job_routes(app)
     
-    port = 5000
+    # Use PORT environment variable for Render deployment, default to 5000 for local
+    port = int(os.environ.get('PORT', 5000))
+    # Use 0.0.0.0 for Render, 127.0.0.1 for local
+    host = '0.0.0.0' if os.environ.get('RENDER') else '127.0.0.1'
     url = f"http://localhost:{port}"
     
-    # Open browser after a short delay
-    threading.Timer(1.5, lambda: webbrowser.open(url)).start()
+    # Open browser after a short delay (only for local development)
+    if not os.environ.get('RENDER'):
+        threading.Timer(1.5, lambda: webbrowser.open(url)).start()
     
     print(f"Starting Signage Publisher Web GUI at {url}")
-    app.run(host='127.0.0.1', port=port, debug=False, threaded=True)
+    app.run(host=host, port=port, debug=False, threaded=True)
