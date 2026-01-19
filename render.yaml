@@ -2,93 +2,13 @@ services:
   # Web application
   - type: web
     name: amazon-publisher-web
-    runtime: python
-    plan: free
+    env: python
     buildCommand: pip install -r requirements.txt
     startCommand: python publisher_web.py
-    envVars:
-      # Feature flags
-      - key: ASYNC_JOBS_ENABLED
-        value: true
-      - key: ASYNC_JOB_TYPES
-        value: generate_amazon_content
-      
-      # API Keys (set these in Render dashboard)
-      - key: ANTHROPIC_API_KEY
-        sync: false
-      - key: OPENAI_API_KEY
-        sync: false
-      
-      # Cloudflare R2 Settings
-      - key: R2_ACCOUNT_ID
-        sync: false
-      - key: R2_ACCESS_KEY_ID
-        sync: false
-      - key: R2_SECRET_ACCESS_KEY
-        sync: false
-      - key: R2_BUCKET_NAME
-        sync: false
-      - key: R2_PUBLIC_URL
-        sync: false
-      
-      # Etsy API (optional)
-      - key: ETSY_API_KEY
-        sync: false
-      
-      # eBay API (optional)
-      - key: EBAY_CLIENT_ID
-        sync: false
-      - key: EBAY_CLIENT_SECRET
-        sync: false
-      - key: EBAY_RU_NAME
-        sync: false
-      - key: EBAY_ENVIRONMENT
-        value: production
-      - key: EBAY_MERCHANT_LOCATION_KEY
-        value: default
-    
-    # Persistent disk for jobs database
-    disk:
-      name: publisher-data
-      mountPath: /opt/render/project/src
-      sizeGB: 1
 
   # Background worker for async jobs
   - type: worker
     name: amazon-publisher-worker
-    runtime: python
-    plan: free
+    env: python
     buildCommand: pip install -r requirements.txt
     startCommand: python worker.py
-    envVars:
-      # Worker configuration
-      - key: WORKER_CONCURRENCY
-        value: 1
-      - key: WORKER_POLL_INTERVAL
-        value: 2
-      - key: WORKER_STALE_JOB_TIMEOUT
-        value: 600
-      
-      # API Keys (same as web service)
-      - key: ANTHROPIC_API_KEY
-        sync: false
-      - key: OPENAI_API_KEY
-        sync: false
-      
-      # Cloudflare R2 Settings (same as web service)
-      - key: R2_ACCOUNT_ID
-        sync: false
-      - key: R2_ACCESS_KEY_ID
-        sync: false
-      - key: R2_SECRET_ACCESS_KEY
-        sync: false
-      - key: R2_BUCKET_NAME
-        sync: false
-      - key: R2_PUBLIC_URL
-        sync: false
-    
-    # Share the same disk as web service for jobs.db
-    disk:
-      name: publisher-data
-      mountPath: /opt/render/project/src
-      sizeGB: 1
