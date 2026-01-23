@@ -162,16 +162,15 @@ def main():
     logging.info("Amazon Publisher - Async Job Worker")
     logging.info("=" * 60)
     
-    # Verify environment is configured
+    # Check environment variables (warn if missing but don't fail)
     required_vars = ['ANTHROPIC_API_KEY', 'R2_ACCOUNT_ID', 'R2_BUCKET_NAME']
     missing = [var for var in required_vars if not os.environ.get(var)]
     
     if missing:
-        logging.error(f"Missing required environment variables: {', '.join(missing)}")
-        logging.error("Make sure config.bat is properly configured")
-        return 1
-    
-    logging.info("Environment variables loaded successfully")
+        logging.warning(f"Missing environment variables: {', '.join(missing)}")
+        logging.warning("Some job types may fail without these variables")
+    else:
+        logging.info("Environment variables loaded successfully")
     
     # Start worker loop
     try:
