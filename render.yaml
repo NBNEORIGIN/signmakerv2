@@ -1,14 +1,69 @@
 services:
   # Web application
   - type: web
-    name: amazon-publisher-web
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: python publisher_web.py
+    name: signmaker-web
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: signmaker-db
+          property: connectionString
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+      - key: R2_PUBLIC_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
 
   # Background worker for async jobs
   - type: worker
-    name: amazon-publisher-worker
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: python worker.py
+    name: signmaker-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: python worker.py
+    dockerContext: .
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: signmaker-db
+          property: connectionString
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+      - key: R2_PUBLIC_URL
+        sync: false
+      - key: WORKER_CONCURRENCY
+        value: 1
+      - key: WORKER_POLL_INTERVAL
+        value: 2
+      - key: WORKER_STALE_JOB_TIMEOUT
+        value: 600
+
+databases:
+  - name: signmaker-db
+    plan: free
