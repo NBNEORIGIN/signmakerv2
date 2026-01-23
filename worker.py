@@ -16,7 +16,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from jobs import claim_next_job, update_job_status, requeue_stale_jobs
-from workflows.amazon_content import run_amazon_content_workflow
 
 # Configure logging
 logging.basicConfig(
@@ -65,38 +64,37 @@ def process_job(job):
     logging.info(f"Processing job {job_id} (type: {job_type})")
     
     try:
-        # Route to appropriate workflow handler
+        # Route to appropriate job handler
         if job_type == 'generate_amazon_content':
-            # Run the Amazon content generation workflow
-            result = run_amazon_content_workflow(
-                job['payload'],
-                progress_callback=lambda stage, data: update_job_status(
-                    job_id,
-                    status='running',
-                    progress={'stage': stage, 'data': data}
-                )
+            # Update status to running
+            update_job_status(job_id, 'running', progress={'stage': 'starting'})
+            
+            # Execute Amazon content generation via subprocess
+            import subprocess
+            payload = job['payload']
+            m_number = payload.get('m_number', '')
+            
+            logging.info(f"Generating Amazon content for M{m_number}")
+            
+            # Run the generate_amazon_content.py script
+            result = subprocess.run(
+                ['python', 'generate_amazon_content.py', '--csv', 'products.csv', '--m-number', m_number, '--upload-images'],
+                capture_output=True,
+                text=True
             )
             
-            if result.get('success'):
+            if result.returncode == 0:
                 # Job succeeded
-                update_job_status(job_id, 'succeeded', result=result)
-                logging.info(f"Job {job_id} succeeded: {result}")
+                update_job_status(job_id, 'succeeded', result={'output': result.stdout})
+                logging.info(f"Job {job_id} succeeded")
             else:
                 # Job failed
-                error = result.get('error', 'Unknown error')
-                attempts = job['attempts'] + 1
-                
-                if attempts >= job['max_attempts']:
-                    # Max retries reached - mark as failed
-                    update_job_status(job_id, 'failed', error=error, attempts=attempts)
-                    logging.error(f"Job {job_id} failed after {attempts} attempts: {error}")
-                else:
-                    # Requeue for retry
-                    update_job_status(job_id, 'queued', error=error, attempts=attempts)
-                    logging.warning(f"Job {job_id} failed (attempt {attempts}/{job['max_attempts']}), requeuing: {error}")
+                error = result.stderr or 'Script failed'
+                update_job_status(job_id, 'failed', error=error)
+                logging.error(f"Job {job_id} failed: {error}")
         
         else:
-            # Unknown job type
+            # Unknown job type - log and mark as failed
             error = f"Unknown job type: {job_type}"
             update_job_status(job_id, 'failed', error=error)
             logging.error(f"Job {job_id} failed: {error}")

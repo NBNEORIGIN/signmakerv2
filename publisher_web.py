@@ -2276,8 +2276,10 @@ def get_preview(m_number):
             <rect x="20" y="15" width="{width-40}" height="{height-30}" fill="url(#signBg)" stroke="#bbb" stroke-width="1" rx="4"/>
         '''
         
-        # Icon placeholder with scale
-        if icon_bounds:
+        # Load and embed actual SVG icons
+        if icon_bounds and icon_files:
+            from lxml import etree
+            
             orig_w = icon_bounds.get('width', 60)
             orig_h = icon_bounds.get('height', 60)
             iw = orig_w * icon_scale
@@ -2286,11 +2288,52 @@ def get_preview(m_number):
             ix = icon_bounds.get('x', 50) + (orig_w - iw) / 2
             iy = icon_bounds.get('y', 50) + (orig_h - ih) / 2
             
-            # Draw icon area with nice styling
+            # Try to load the first icon file
+            icons_dir = APP_DIR / "001 ICONS"
+            icon_path = icons_dir / icon_files[0]
+            
+            if icon_path.exists() and icon_path.suffix.lower() == '.svg':
+                try:
+                    # Load and parse the icon SVG
+                    icon_tree = etree.parse(str(icon_path))
+                    icon_root = icon_tree.getroot()
+                    
+                    # Extract icon content (skip root svg element)
+                    icon_content = ''
+                    for child in icon_root:
+                        icon_content += etree.tostring(child, encoding='unicode')
+                    
+                    # Embed icon in a group with transform for positioning and scaling
+                    svg += f'''
+                        <g transform="translate({ix}, {iy}) scale({icon_scale})">
+                            {icon_content}
+                        </g>
+                    '''
+                except Exception as e:
+                    # Fallback to placeholder if icon loading fails
+                    svg += f'''
+                        <rect x="{ix}" y="{iy}" width="{iw}" height="{ih}" fill="#3498db" opacity="0.25" stroke="#3498db" stroke-width="2" rx="4"/>
+                        <text x="{ix + iw/2}" y="{iy + ih/2}" text-anchor="middle" dominant-baseline="middle" font-size="8" fill="#c00">Error loading icon</text>
+                    '''
+            else:
+                # Icon file not found - show placeholder
+                svg += f'''
+                    <rect x="{ix}" y="{iy}" width="{iw}" height="{ih}" fill="#3498db" opacity="0.25" stroke="#3498db" stroke-width="2" rx="4"/>
+                    <text x="{ix + iw/2}" y="{iy + ih/2 - 5}" text-anchor="middle" dominant-baseline="middle" font-size="{max(8, min(14, iw/6))}" font-weight="bold" fill="#2980b9">ICON</text>
+                    <text x="{ix + iw/2}" y="{iy + ih/2 + 10}" text-anchor="middle" dominant-baseline="middle" font-size="{max(6, min(10, iw/8))}" fill="#3498db">{icon_files[0]}</text>
+                '''
+        elif icon_bounds:
+            # No icon files specified - show placeholder
+            orig_w = icon_bounds.get('width', 60)
+            orig_h = icon_bounds.get('height', 60)
+            iw = orig_w * icon_scale
+            ih = orig_h * icon_scale
+            ix = icon_bounds.get('x', 50) + (orig_w - iw) / 2
+            iy = icon_bounds.get('y', 50) + (orig_h - ih) / 2
+            
             svg += f'''
                 <rect x="{ix}" y="{iy}" width="{iw}" height="{ih}" fill="#3498db" opacity="0.25" stroke="#3498db" stroke-width="2" rx="4"/>
-                <text x="{ix + iw/2}" y="{iy + ih/2 - 5}" text-anchor="middle" dominant-baseline="middle" font-size="{max(8, min(14, iw/6))}" font-weight="bold" fill="#2980b9">ICON</text>
-                <text x="{ix + iw/2}" y="{iy + ih/2 + 10}" text-anchor="middle" dominant-baseline="middle" font-size="{max(6, min(10, iw/8))}" fill="#3498db">{icon_scale}x</text>
+                <text x="{ix + iw/2}" y="{iy + ih/2}" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#2980b9">No Icon</text>
             '''
         
         # Text lines with scale
